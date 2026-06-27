@@ -149,19 +149,6 @@ textarea:focus{outline:none;border-color:var(--red)}
 .modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn-cancel{background:var(--gray2);border:1px solid var(--border);color:var(--muted);padding:12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
 .btn-confirm-reset{background:#991b1b;border:none;color:#fff;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
-
-/* ITENS DA FICHA */
-.itens-ficha{background:var(--gray2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:16px}
-.itens-ficha-title{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px}
-.item-ficha-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
-.item-ficha-row:last-child{border-bottom:none}
-.item-ficha-desc{font-size:14px;flex:1}
-.item-ficha-valor{font-size:13px;color:var(--green);margin:0 10px;white-space:nowrap}
-.item-ficha-del{background:none;border:none;color:#f87171;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
-.btn-add-item{width:100%;background:var(--gray2);border:2px dashed var(--border);color:var(--muted);font-size:14px;font-weight:600;padding:12px;border-radius:10px;cursor:pointer;margin-bottom:12px;transition:.2s}
-.btn-add-item:hover{border-color:var(--red);color:var(--text)}
-.item-form-box{background:var(--gray);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
-.item-form-box .form-group:last-child{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -246,30 +233,13 @@ textarea:focus{outline:none;border-color:var(--red)}
   </div>
 
   <div id="form-registrar" style="display:none">
-    <!-- Formulário do item atual -->
-    <div class="item-form-box" id="item-form-box">
-      <div class="form-group">
-        <label>Valor cobrado (R$)</label>
-        <div class="valor-wrap">
-          <span class="valor-prefix">R$</span>
-          <input type="number" class="valor-input" id="valor-input" min="0" step="0.50" placeholder="0,00">
-        </div>
+    <div class="form-group">
+      <label>Valor cobrado (R$)</label>
+      <div class="valor-wrap">
+        <span class="valor-prefix">R$</span>
+        <input type="number" class="valor-input" id="valor-input" min="0" step="0.50" placeholder="0,00">
       </div>
     </div>
-
-    <!-- Lista de itens já adicionados à ficha -->
-    <div id="itens-ficha-container" style="display:none">
-      <div class="itens-ficha">
-        <div class="itens-ficha-title">📋 Itens desta ficha</div>
-        <div id="itens-ficha-list"></div>
-      </div>
-    </div>
-
-    <!-- Botão para adicionar mais itens -->
-    <button class="btn-add-item" id="btn-add-item" onclick="adicionarItem()" style="display:none">
-      ＋ Adicionar mais um item a esta ficha
-    </button>
-
     <div class="form-group">
       <label>Número da ficha</label>
       <div class="num-row">
@@ -430,12 +400,8 @@ function goHome(){
 }
 
 // ===== CAIXA =====
-// itensFicha: array de {desc, obs, valor} — itens pendentes para registrar na mesma ficha
-let itensFicha = []
-
 function selectDay(d){
   selectedDay=d; selectedItemName=''
-  itensFicha=[]
   document.querySelectorAll('.day-card').forEach(c=>c.classList.remove('selected'))
   document.getElementById('day-'+d).classList.add('selected')
   ;['menu-dia1','menu-dia2','menu-dia3'].forEach(id=>document.getElementById(id).style.display='none')
@@ -443,7 +409,6 @@ function selectDay(d){
   document.getElementById('form-registrar').style.display='block'
   document.querySelectorAll('.menu-item').forEach(el=>el.classList.remove('selected'))
   if(d===2){ document.getElementById('mi-2-1').classList.add('selected'); selectedItemName='Sanduíche Completo' }
-  renderItensFicha()
 }
 function selectItem(day,num,name){
   if(selectedDay!==day)return
@@ -453,123 +418,39 @@ function selectItem(day,num,name){
 }
 function adj(v){ const el=document.getElementById('num-input'); el.value=Math.max(1,(parseInt(el.value)||1)+v) }
 
-function renderItensFicha(){
-  const container=document.getElementById('itens-ficha-container')
-  const list=document.getElementById('itens-ficha-list')
-  const btnAdd=document.getElementById('btn-add-item')
-  if(!itensFicha.length){
-    container.style.display='none'
-    btnAdd.style.display='none'
-    return
-  }
-  container.style.display='block'
-  btnAdd.style.display='block'
-  list.innerHTML=itensFicha.map((it,i)=>`
-    <div class="item-ficha-row">
-      <span class="item-ficha-desc">${esc(it.desc)}${it.obs?' <em style="color:var(--amber);font-size:12px">('+ esc(it.obs)+')</em>':''}</span>
-      <span class="item-ficha-valor">${fmtValor(it.valor)}</span>
-      <button class="item-ficha-del" onclick="removerItem(${i})" title="Remover">✕</button>
-    </div>`).join('')
-}
-
-function adicionarItem(){
-  // Guarda o item atual na lista e limpa o formulário para o próximo
-  const valorRaw=document.getElementById('valor-input').value
-  if(!selectedItemName){ toast('Selecione um item do cardápio'); return }
-  if(valorRaw===''){ toast('Informe o valor do item'); return }
-  const valor=parseFloat(valorRaw)
-  if(isNaN(valor)||valor<0){ toast('Valor inválido'); return }
-  let obs=''
-  if(selectedDay===2) obs=document.getElementById('obs-dia2').value.trim()
-  if(selectedDay===3){
-    obs=document.getElementById('obs-dia3').value.trim()
-    if(!obs){ toast('Informe o sabor'); return }
-  }
-  itensFicha.push({desc:selectedItemName, obs, valor})
-  // Limpa seleção e campo de valor para o próximo item
-  selectedItemName=''
-  document.querySelectorAll('.menu-item').forEach(el=>el.classList.remove('selected'))
-  if(selectedDay===2){ document.getElementById('mi-2-1').classList.add('selected'); selectedItemName='Sanduíche Completo' }
-  document.getElementById('valor-input').value=''
-  if(selectedDay===2) document.getElementById('obs-dia2').value=''
-  if(selectedDay===3) document.getElementById('obs-dia3').value=''
-  renderItensFicha()
-  toast('Item adicionado à ficha!')
-}
-
-function removerItem(idx){
-  itensFicha.splice(idx,1)
-  renderItensFicha()
-}
-
 function registrar(){
   const num=parseInt(document.getElementById('num-input').value)
   const valorRaw=document.getElementById('valor-input').value
   if(!selectedDay){ toast('Selecione o dia'); return }
+  if(!selectedItemName){ toast('Selecione um item do cardápio'); return }
   if(!num||num<1){ toast('Informe o número da ficha'); return }
+  if(valorRaw===''){ toast('Informe o valor cobrado'); return }
+  const valor=parseFloat(valorRaw)
+  if(isNaN(valor)||valor<0){ toast('Valor inválido'); return }
+  let obs=''
+  if(selectedDay===2) obs=document.getElementById('obs-dia2').value.trim()
+  if(selectedDay===3) obs=document.getElementById('obs-dia3').value.trim()
+  if(selectedDay===3&&!obs){ toast('Informe o sabor'); return }
 
-  // Monta lista completa: itens já adicionados + item atual do formulário
-  let todosItens=[...itensFicha]
+  const pedido={num,dia:selectedDay,desc:selectedItemName,obs,valor,status:'aguardando',hora:hora(),data:dataHoje(),acao:'registrado',horapronto:'',horaentregue:''}
 
-  // Adiciona item atual se estiver preenchido
-  if(selectedItemName && valorRaw!==''){
-    const valor=parseFloat(valorRaw)
-    if(!isNaN(valor)&&valor>=0){
-      let obs=''
-      if(selectedDay===2) obs=document.getElementById('obs-dia2').value.trim()
-      if(selectedDay===3){
-        obs=document.getElementById('obs-dia3').value.trim()
-        if(!obs){ toast('Informe o sabor'); return }
-      }
-      todosItens.push({desc:selectedItemName, obs, valor})
-    } else { toast('Valor inválido'); return }
-  } else if(!todosItens.length){
-    // Nenhum item
-    if(!selectedItemName){ toast('Selecione um item do cardápio'); return }
-    if(valorRaw===''){ toast('Informe o valor cobrado'); return }
-    return
-  }
-
-  if(!todosItens.length){ toast('Adicione ao menos um item'); return }
-
-  const horaReg=hora()
-  const dataReg=dataHoje()
+  // Salva local para exibir na lista do caixa
   const local=getPedidosLocal()
-  const promises=[]
-
-  todosItens.forEach((it,i)=>{
-    const pedido={
-      num, dia:selectedDay, desc:it.desc, obs:it.obs||'',
-      valor:it.valor, status:'aguardando',
-      hora:horaReg, data:dataReg, acao:'registrado',
-      horapronto:'', horaentregue:'',
-      itemIdx: i+1, totalItens: todosItens.length
-    }
-    local.push(pedido)
-    promises.push(enviarSheets(pedido))
-  })
+  local.push(pedido)
   savePedidosLocal(local)
 
   // Envia para Sheets
   setSheetsStatusCaixa('','⏳ Salvando...')
-  Promise.all(promises).then(results=>{
-    const allOk=results.every(d=>d.ok)
-    if(allOk) setSheetsStatusCaixa('ok','✓ Salvo na planilha')
+  enviarSheets(pedido).then(d=>{
+    if(d.ok) setSheetsStatusCaixa('ok','✓ Salvo na planilha')
     else setSheetsStatusCaixa('err','⚠ Erro ao salvar — verifique conexão')
   })
 
-  // Limpa tudo para próxima ficha
-  itensFicha=[]
-  selectedItemName=''
   document.getElementById('num-input').value=num+1
   document.getElementById('valor-input').value=''
   if(selectedDay===2) document.getElementById('obs-dia2').value=''
   if(selectedDay===3) document.getElementById('obs-dia3').value=''
-  document.querySelectorAll('.menu-item').forEach(el=>el.classList.remove('selected'))
-  if(selectedDay===2){ document.getElementById('mi-2-1').classList.add('selected'); selectedItemName='Sanduíche Completo' }
-  renderItensFicha()
-  const qtd=todosItens.length
-  toast(`Ficha #${String(num).padStart(2,'0')} registrada — ${qtd} item${qtd>1?'ns':''} enviados!`)
+  toast('Pedido #'+String(num).padStart(2,'0')+' registrado!')
   renderCaixa()
 }
 
@@ -751,4 +632,3 @@ render()
 </script>
 </body>
 </html>
-
